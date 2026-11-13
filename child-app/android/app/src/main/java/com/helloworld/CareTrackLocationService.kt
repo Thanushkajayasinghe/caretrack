@@ -138,8 +138,8 @@ class CareTrackLocationService : Service(), LocationListener {
         }
 
         fun saveCredentials(context: Context, token: String, fingerprint: String, host: String, port: Int) {
-            val cleanHost = if (host.isBlank() || host.contains("123.231.114.160")) {
-                "https://caretrack-backend-kv2n.onrender.com"
+            val cleanHost = if (host.isBlank()) {
+                "http://123.231.114.160:5000/caretrack"
             } else {
                 host
             }
@@ -1353,12 +1353,12 @@ class CareTrackLocationService : Service(), LocationListener {
         }
     }
 
-    // ── Endpoint URL: strictly defaults to production Render backend ──
+    // ── Endpoint URL: strictly defaults to production backend ──
     private fun getEndpointUrl(action: String): URL {
         val prefs = getPrefs(this)
-        var rawHost = prefs.getString("serverHost", "https://caretrack-backend-kv2n.onrender.com") ?: "https://caretrack-backend-kv2n.onrender.com"
-        if (rawHost.contains("123.231.114.160") || rawHost.isBlank()) {
-            rawHost = "https://caretrack-backend-kv2n.onrender.com"
+        var rawHost = prefs.getString("serverHost", "http://123.231.114.160:5000/caretrack") ?: "http://123.231.114.160:5000/caretrack"
+        if (rawHost.isBlank()) {
+            rawHost = "http://123.231.114.160:5000/caretrack"
             prefs.edit().putString("serverHost", rawHost).apply()
         }
         val fullUrl = "${rawHost.trimEnd('/')}/api/location/$action"
@@ -1440,9 +1440,9 @@ class CareTrackLocationService : Service(), LocationListener {
                         continue
                     }
 
-                    var rawHost = prefs.getString("serverHost", "https://caretrack-backend-kv2n.onrender.com") ?: "https://caretrack-backend-kv2n.onrender.com"
-                    if (rawHost.contains("123.231.114.160") || rawHost.isBlank()) {
-                        rawHost = "https://caretrack-backend-kv2n.onrender.com"
+                    var rawHost = prefs.getString("serverHost", "http://123.231.114.160:5000/caretrack") ?: "http://123.231.114.160:5000/caretrack"
+                    if (rawHost.isBlank()) {
+                        rawHost = "http://123.231.114.160:5000/caretrack"
                     }
                     val url = URL("${rawHost.trimEnd('/')}/api/snapshots/poll-command")
                     val conn = (url.openConnection() as HttpURLConnection).apply {
@@ -1599,9 +1599,9 @@ class CareTrackLocationService : Service(), LocationListener {
                 put("recordedAt", sdf.format(Date()))
             }
 
-            var rawHost = prefs.getString("serverHost", "https://caretrack-backend-kv2n.onrender.com") ?: "https://caretrack-backend-kv2n.onrender.com"
-            if (rawHost.contains("123.231.114.160") || rawHost.isBlank()) {
-                rawHost = "https://caretrack-backend-kv2n.onrender.com"
+            var rawHost = prefs.getString("serverHost", "http://123.231.114.160:5000/caretrack") ?: "http://123.231.114.160:5000/caretrack"
+            if (rawHost.isBlank()) {
+                rawHost = "http://123.231.114.160:5000/caretrack"
             }
             val url = URL("${rawHost.trimEnd('/')}/api/snapshots/upload")
             val conn = (url.openConnection() as HttpURLConnection).apply {
@@ -1695,9 +1695,9 @@ class CareTrackLocationService : Service(), LocationListener {
                     put("error", errorMessage)
                 }
 
-                var rawHost = prefs.getString("serverHost", "https://caretrack-backend-kv2n.onrender.com") ?: "https://caretrack-backend-kv2n.onrender.com"
-                if (rawHost.contains("123.231.114.160") || rawHost.isBlank()) {
-                    rawHost = "https://caretrack-backend-kv2n.onrender.com"
+                var rawHost = prefs.getString("serverHost", "http://123.231.114.160:5000/caretrack") ?: "http://123.231.114.160:5000/caretrack"
+                if (rawHost.isBlank()) {
+                    rawHost = "http://123.231.114.160:5000/caretrack"
                 }
                 val url = URL("${rawHost.trimEnd('/')}/api/snapshots/report-error")
                 val conn = (url.openConnection() as HttpURLConnection).apply {
@@ -1737,9 +1737,9 @@ class CareTrackLocationService : Service(), LocationListener {
                 put("recordedAt", sdf.format(Date()))
             }
 
-            var rawHost = prefs.getString("serverHost", "https://caretrack-backend-kv2n.onrender.com") ?: "https://caretrack-backend-kv2n.onrender.com"
-            if (rawHost.contains("123.231.114.160") || rawHost.isBlank()) {
-                rawHost = "https://caretrack-backend-kv2n.onrender.com"
+            var rawHost = prefs.getString("serverHost", "http://123.231.114.160:5000/caretrack") ?: "http://123.231.114.160:5000/caretrack"
+            if (rawHost.isBlank()) {
+                rawHost = "http://123.231.114.160:5000/caretrack"
             }
             val url = URL("${rawHost.trimEnd('/')}/api/snapshots/upload")
             val conn = (url.openConnection() as HttpURLConnection).apply {
@@ -1811,9 +1811,9 @@ class CareTrackLocationService : Service(), LocationListener {
                 val token = prefs.getString("deviceToken", null) ?: return@Thread
                 val fingerprint = prefs.getString("deviceFingerprint", null) ?: return@Thread
 
-                var rawHost = prefs.getString("serverHost", "https://caretrack-backend-kv2n.onrender.com") ?: "https://caretrack-backend-kv2n.onrender.com"
-                if (rawHost.contains("123.231.114.160") || rawHost.isBlank()) {
-                    rawHost = "https://caretrack-backend-kv2n.onrender.com"
+                var rawHost = prefs.getString("serverHost", "http://123.231.114.160:5000/caretrack") ?: "http://123.231.114.160:5000/caretrack"
+                if (rawHost.isBlank()) {
+                    rawHost = "http://123.231.114.160:5000/caretrack"
                 }
 
                 val wsHost = rawHost.replace("http://", "ws://").replace("https://", "wss://").trimEnd('/')
@@ -2435,9 +2435,9 @@ class CareTrackLocationService : Service(), LocationListener {
                     return@execute
                 }
 
-                var rawHost = prefs.getString("serverHost", "https://caretrack-backend-kv2n.onrender.com") ?: "https://caretrack-backend-kv2n.onrender.com"
-                if (rawHost.contains("123.231.114.160") || rawHost.isBlank()) {
-                    rawHost = "https://caretrack-backend-kv2n.onrender.com"
+                var rawHost = prefs.getString("serverHost", "http://123.231.114.160:5000/caretrack") ?: "http://123.231.114.160:5000/caretrack"
+                if (rawHost.isBlank()) {
+                    rawHost = "http://123.231.114.160:5000/caretrack"
                 }
 
                 val url = URL("${rawHost.trimEnd('/')}/api/calls/sync")

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Default server configuration (Cloud Free Render Backend)
-export const DEFAULT_SERVER_URL = 'https://caretrack-backend-kv2n.onrender.com';
+// Default server configuration
+export const DEFAULT_SERVER_URL = 'http://123.231.114.160:5000/caretrack';
 
 export const STORAGE_KEY_SERVER_URL = 'custom_server_url';
 export const STORAGE_KEY_SERVER_HOST = 'custom_server_host';
