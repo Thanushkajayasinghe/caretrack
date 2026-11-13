@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">CareTrack Child</string>
+    <string name="accessibility_service_description">CareTrack Tamper Guard monitors system settings to prevent unauthorized uninstallation, app termination, or disabling of safety tracking.</string>
+    <string name="device_admin_description">Protects CareTrack against immediate uninstallation from the launcher without the Parent Master PIN.</string>
+</resources>

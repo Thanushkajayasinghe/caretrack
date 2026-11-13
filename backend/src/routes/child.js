@@ -1,0 +1,286 @@
+import express from 'express';
+import { z } from 'zod';
+import { db } from '../config/db.js';
+import { requireParentAuth } from '../middleware/auth.js';
+import { AppError } from '../middleware/errorHandler.js';
+import { getIO } from '../sockets/index.js';
+import { getCachedLatestLocation } from '../services/locationCache.js';
+
+const router = express.Router();
+
+const createChildSchema = z.object({
+  name: z.string().min(1).max(100),
+  avatarColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+});
+
+// ── GET /api/children ─────────────────────────────────────────────────────────
+router.get('/', requireParentAuth, async (req, res, next) => {
+  try {
+    let children;
+    try {
+      children = await db('children')
+        .leftJoin('child_devices', function () {
+          this.on('children.id', '=', 'child_devices.child_id')
+            .andOn('child_devices.is_active', '=', db.raw('true'));
+        })
+        .where('children.parent_id', req.parent.id)
+        .select(
+          'children.id',
+          'children.name',
+          'children.avatar_url',
+          'children.avatar_color',
+          'children.created_at',
+          'child_devices.id as device_id',
+          'child_devices.device_name',
+          'child_devices.android_version',
+          'child_devices.last_seen',
+          'child_devices.battery_level as device_battery_level',
+          'child_devices.is_charging as device_is_charging',
+          'child_devices.movement_threshold as movement_threshold',
+        );
+    } catch (dbErr) {
+      // Fallback if movement_threshold column has not migrated yet
+      children = await db('children')
+        .leftJoin('child_devices', function () {
+          this.on('children.id', '=', 'child_devices.child_id')
+            .andOn('child_devices.is_active', '=', db.raw('true'));
+        })
+        .where('children.parent_id', req.parent.id)
+        .select(
+          'children.id',
+          'children.name',
+          'children.avatar_url',
+          'children.avatar_color',
+          'children.created_at',
+          'child_devices.id as device_id',
+          'child_devices.device_name',
+          'child_devices.android_version',
+          'child_devices.last_seen',
+          'child_devices.battery_level as device_battery_level',
+          'child_devices.is_charging as device_is_charging',
+        );
+    }
+
+    // Enrich with last location
+    const enriched = await Promise.all(
+      children.map(async (child) => {
+        const lastLocation = await db('locations')
+          .where({ child_id: child.id })
+          .select(
+            db.raw('ST_Y(location::geometry) as lat'),
+            db.raw('ST_X(location::geometry) as lng'),
+            'accuracy', 'speed', 'heading', 'battery_level', 'is_charging', 'recorded_at',
+          )
+          .orderBy('recorded_at', 'desc')
+          .first();
+
+        let effectiveLocation = lastLocation;
+        if (!effectiveLocation) {
+          try {
+            const cached = await getCachedLatestLocation(child.id);
+            if (cached && cached.lat != null && cached.lng != null) {
+              effectiveLocation = {
+                lat: cached.lat,
+                lng: cached.lng,
+                accuracy: cached.accuracy ?? null,
+                speed: cached.speed ?? 0,
+                heading: cached.heading ?? null,
+                battery_level: cached.battery_level ?? child.device_battery_level,
+                is_charging: cached.is_charging ?? child.device_is_charging,
+                recorded_at: cached.recorded_at,
+              };
+            }
+          } catch (_e) {}
+        }
+
+        if (effectiveLocation) {
+          if (child.device_battery_level != null) {
+            effectiveLocation.battery_level = child.device_battery_level;
+          }
+          if (child.device_is_charging != null) {
+            effectiveLocation.is_charging = child.device_is_charging;
+          }
+          // If location fix is older than 45 seconds, instantaneous movement speed is 0
+          const locAge = effectiveLocation.recorded_at ? Math.abs(Date.now() - new Date(effectiveLocation.recorded_at).getTime()) : 0;
+          if (locAge > 45000) {
+            effectiveLocation.speed = 0;
+          }
+        }
+
+        let hasLiveSocket = false;
+        try {
+          const io = getIO();
+          hasLiveSocket = Boolean(io?.sockets?.adapter?.rooms?.get(`child:${child.id}`)?.size > 0);
+        } catch (_e) {}
+
+        const lastSeenTime = child.last_seen ? new Date(child.last_seen).getTime() : 0;
+        const lastLocTime = effectiveLocation?.recorded_at ? new Date(effectiveLocation.recorded_at).getTime() : 0;
+        const mostRecent = Math.max(lastSeenTime, lastLocTime);
+        const isOnline = hasLiveSocket || (mostRecent > 0 && (Date.now() - mostRecent) < 60000);
+
+        return { ...child, isOnline, lastLocation: effectiveLocation || null };
+      }),
+    );
+
+    res.json({ children: enriched });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/children ────────────────────────────────────────────────────────
+router.post('/', requireParentAuth, async (req, res, next) => {
+  try {
+    const { name, avatarColor } = createChildSchema.parse(req.body);
+    const [child] = await db('children')
+      .insert({ parent_id: req.parent.id, name, avatar_color: avatarColor })
+      .returning(['id', 'name', 'avatar_color', 'created_at']);
+    res.status(201).json({ child });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', issues: err.issues });
+    }
+    next(err);
+  }
+});
+
+// ── GET /api/children/:id ─────────────────────────────────────────────────────
+router.get('/:id', requireParentAuth, async (req, res, next) => {
+  try {
+    const child = await db('children')
+      .where({ id: req.params.id, parent_id: req.parent.id })
+      .first();
+    if (!child) throw new AppError('Child not found', 404);
+
+    let devices;
+    try {
+      devices = await db('child_devices')
+        .where({ child_id: child.id, is_active: true })
+        .select('id', 'device_name', 'android_version', 'last_seen', 'created_at', 'movement_threshold');
+    } catch (_e) {
+      devices = await db('child_devices')
+        .where({ child_id: child.id, is_active: true })
+        .select('id', 'device_name', 'android_version', 'last_seen', 'created_at');
+    }
+
+    res.json({ child, devices });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── DELETE /api/children/:id ──────────────────────────────────────────────────
+router.delete('/:id', requireParentAuth, async (req, res, next) => {
+  try {
+    const deleted = await db('children')
+      .where({ id: req.params.id, parent_id: req.parent.id })
+      .delete();
+    if (!deleted) throw new AppError('Child not found', 404);
+    res.json({ message: 'Child removed' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── PUT /api/children/:id/settings ────────────────────────────────────────────
+// Parent updates movement detection settings for a specific child
+router.put('/:id/settings', requireParentAuth, async (req, res, next) => {
+  try {
+    const child = await db('children')
+      .where({ id: req.params.id, parent_id: req.parent.id })
+      .first();
+    if (!child) throw new AppError('Child not found', 404);
+
+    const { movementThreshold } = req.body;
+
+    // Update all active devices for this child
+    if (movementThreshold != null) {
+      const threshold = Number(movementThreshold);
+      if (threshold < 5 || threshold > 200) {
+        return res.status(400).json({ error: 'Movement threshold must be between 5 and 200 meters' });
+      }
+      await db('child_devices')
+        .where({ child_id: child.id, is_active: true })
+        .update({ movement_threshold: threshold });
+    }
+
+    res.json({ ok: true, movementThreshold: movementThreshold ?? 20 });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── PUT /api/children/:id/avatar ──────────────────────────────────────────────
+// Parent updates avatar photo (base64 data URI or image URL) for a specific child
+router.put('/:id/avatar', requireParentAuth, async (req, res, next) => {
+  try {
+    const child = await db('children')
+      .where({ id: req.params.id, parent_id: req.parent.id })
+      .first();
+    if (!child) throw new AppError('Child not found', 404);
+
+    const { avatarUrl } = req.body;
+    if (!avatarUrl || typeof avatarUrl !== 'string') {
+      return res.status(400).json({ error: 'Valid avatarUrl string is required' });
+    }
+
+    await db('children')
+      .where({ id: req.params.id })
+      .update({ avatar_url: avatarUrl, updated_at: new Date() });
+
+    try {
+      const io = getIO();
+      if (io) {
+        io.to(`parent:${req.parent.id}`).emit('child:updated', {
+          childId: req.params.id,
+          avatarUrl,
+        });
+      }
+    } catch (_e) {}
+
+    res.json({ ok: true, avatarUrl });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/children/:id/tamper-pin ─────────────────────────────────────────
+// Parent remotely updates or resets Master Tamper PIN for child device
+const tamperPinSchema = z.object({
+  pin: z.string().min(4).max(6).regex(/^\d+$/, 'PIN must be 4-6 digits'),
+});
+
+router.post('/:id/tamper-pin', requireParentAuth, async (req, res, next) => {
+  try {
+    const child = await db('children')
+      .where({ id: req.params.id, parent_id: req.parent.id })
+      .first();
+    if (!child) throw new AppError('Child not found', 404);
+
+    const { pin } = tamperPinSchema.parse(req.body);
+
+    // Broadcast new PIN in real time to child device room and parent room
+    try {
+      const io = getIO();
+      if (io) {
+        io.to(`child:${req.params.id}`).emit('tamper_pin_updated', {
+          childId: req.params.id,
+          pin,
+        });
+        io.to(`parent:${req.parent.id}`).emit('child:pin_updated', {
+          childId: req.params.id,
+        });
+      }
+    } catch (_e) {}
+
+    res.json({ ok: true, message: 'Tamper PIN updated and pushed to child device' });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.issues.map((i) => i.message).join(', ') });
+    }
+    next(err);
+  }
+});
+
+export default router;
+

@@ -1,0 +1,22 @@
+{
+  "name": "caretrack",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend"
+  ],
+  "scripts": {
+    "backend": "npm run dev --workspace=backend",
+    "parent": "cd parent-app && npm run android",
+    "child": "cd child-app && npm run android"
+  },
+  "allowScripts": {
+    "@react-native-community/template": true,
+    "@react-native-community/cli": true,
+    "react-native": true,
+    "@react-native/gradle-plugin": true,
+    "@react-native/metro-config": true,
+    "@react-native/babel-preset": true
+  },
+  "note": "React Native apps (parent-app and child-app) are managed independently. Run 'npm install' inside each directory separately to install their dependencies."
+}

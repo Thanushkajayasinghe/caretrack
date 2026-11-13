@@ -1,0 +1,151 @@
+create files
+
+I want you to create a persistent project context system for this project so we can continue development across long conversations and new chat sessions without losing important decisions or progress.
+
+First, inspect the entire existing project and understand its current structure, implementation, configuration, and important decisions.
+
+Then create these files in the project root:
+
+1. `PROJECT_CONTEXT.md`
+
+   * Overall project purpose
+   * Technology stack
+   * Architecture
+   * Important design decisions
+   * Coding conventions
+   * Important constraints
+   * Things that must NOT be changed without asking me
+   * Important dependencies and configurations
+   * Current major features
+
+2. `SESSION_STATE.md`
+
+   * Current development status
+   * What has been completed
+   * What is currently being worked on
+   * Known bugs/problems
+   * Latest test results
+   * Current investigation
+   * Exact next steps
+   * Any unfinished work
+   * Important decisions made during the current session
+
+3. `ARCHITECTURE.md`
+
+   * Project architecture
+   * Main modules/components
+   * Data flow
+   * Backend/API structure
+   * Database structure
+   * Important interactions between components
+
+4. `DECISIONS.md`
+
+   * Important technical decisions made during development
+   * Why each decision was made
+   * Alternatives that were rejected
+   * Do not remove old decisions; mark them as superseded if they are replaced.
+
+5. `TESTING.md`
+
+   * How the project is tested
+   * Test devices/environment
+   * Test procedures
+   * Known test scenarios
+   * Previous test results
+   * Known regressions
+
+IMPORTANT RULES:
+
+* Do not invent information. Only document information you can verify from the project or from our conversation.
+* Do not modify application code just to create these documentation files.
+* Do not change architecture or technical decisions while documenting them.
+* Keep these files concise but sufficiently detailed for another AI agent to continue the project.
+* Treat the actual source code as the source of truth when documentation conflicts with code.
+* When I make an important technical decision, update the appropriate documentation file.
+* When a feature is completed, update `SESSION_STATE.md`.
+* When a bug is discovered, record it in `SESSION_STATE.md`.
+* When a major architectural decision is made, record it in `DECISIONS.md`.
+* Before making significant changes in future sessions, read these files first.
+
+After creating the files, show me:
+
+1. The files you created.
+2. A short summary of what you recorded in each file.
+3. Any important information you could not determine and need me to confirm.
+
+Do not start implementing new features yet. First complete the documentation setup.
+
+
+
+======================================================================================================================================
+
+from next conversation
+
+
+This conversation is becoming long. Do not start any new implementation.
+
+I want to close this session cleanly.
+
+Please:
+
+1. Review everything we accomplished in this conversation.
+2. Review the current source code and verify the actual current state.
+3. Update `SESSION_STATE.md` with:
+
+   * What was completed
+   * What was changed
+   * Current implementation state
+   * Current bugs/problems
+   * Tests performed and their results
+   * What we were investigating
+   * Exact next steps
+   * Any unfinished work
+4. Update `DECISIONS.md` with any important technical decisions made in this session.
+5. Update `PROJECT_CONTEXT.md` only if a permanent project-level fact or constraint changed.
+6. Do not leave important information only in this conversation.
+7. Do not make additional feature changes.
+
+Finally, give me a concise "NEXT SESSION HANDOFF" containing only what the next conversation needs to know.
+
+
+
+======================================================================================================================================
+
+In New conversation
+
+
+
+
+Continue the project from the previous session.
+
+Before doing anything:
+
+Read PROJECT_CONTEXT.md
+Read SESSION_STATE.md
+Read ARCHITECTURE.md
+Read DECISIONS.md
+Read TESTING.md
+Inspect the relevant current source code.
+
+Treat the files and current source code as the source of truth, not assumptions from previous conversations.
+
+Tell me:
+
+What is currently completed
+What is currently broken or under investigation
+What the previous session identified as the next step
+
+Then wait for my instruction. Do not modify anything yet.
+
+
+
+
+
+
+
+
+
+
+
+

